@@ -23,7 +23,7 @@ st.caption("Meier, F. (2024, May). Using Wikipedia Pageview Data to Investigate 
      In Proceedings of the 16th ACM Web Science Conference (pp. 365-375).")
 
 #uploading the dataframeS
-df = pd.read_csv("st01_data.csv")
+df = pd.read_csv("data/st01_data.csv")
 
 st.divider()
 
@@ -196,4 +196,62 @@ if language:
     }
     )
 
+
 st.divider()
+
+# analysis no 4
+st.header("Article Counts per Language Within Selected Page Size Range")
+st.write(
+    "Use the slider below to select a page size range (in bytes). "
+    "The table and bar chart show how many articles each language has "
+    "within that range."
+)
+
+# Get overall min and max page sizes
+min_pagesize = int(df["pagesize"].min())
+max_pagesize = int(df["pagesize"].max())
+
+# Range slider for page size
+page_min, page_max = st.slider(
+    "Select page size range (in bytes)",
+    min_value=min_pagesize,
+    max_value=max_pagesize,
+    value=(min_pagesize, max_pagesize),
+    step=500,
+)
+
+# Filtering articles within this range
+filtered = df["pagesize"].between(page_min, page_max)
+df_range = df[filtered].copy()
+
+
+# Counting articles per language within the range
+range_counts = (
+    df_range["lan_full"]
+    .value_counts()
+    .reset_index()
+)
+
+range_counts.columns = ["lan_full", "article_count"]
+
+#making sure all languages are present
+all_langs = language_df[["lan_full"]].copy()
+summary_counts = all_langs.merge(range_counts, on="lan_full", how="left")
+summary_counts["article_count"] = summary_counts["article_count"].fillna(0).astype(int)
+
+# plotting graph
+fig_counts = px.bar(
+    summary_counts,
+    x="lan_full",
+    y="article_count",
+    color="lan_full",
+    title="Number of Articles per Language within Selected Page Size Range",
+    labels={
+        "lan_full": "Language",
+        "article_count": "Number of Articles",
+    },
+)
+
+fig_counts.update_layout(xaxis_tickangle=-40)
+
+st.plotly_chart(fig_counts, use_container_width=True)
